@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicatie</title>
+  <style>
+
+    /* Descrierea aplicatiei
+    Scopul principal este acela de a tine evidenta activitatilor periodice (taskurilor) unei firme care pot produce 
+    amenzi nedorite, indisponibilizarea autovehiculelor, intreruperea procesului de productie, blocarea site-ului 
+    sau blocarea domeniului de e-mail. In interfata cu utilizatorul apare prima data un chenar unde sunt introduse 
+    task-urile, numele angajatului care e responsabil cu gestiunea lui, gradul critic al task-ului si data. In ceea 
+    ce priveste gradul critic, acesta este curpins intre 1 si 5, 1 indicand faptul ca task ul respectiv trebuie 
+    indeplinit cat mai urgent. Pentru acest lucru, dupa introducerea task ului acesta este afisat pe pagina web, unde 
+    toate task urile sunt ordonate dupa campul Grad critic. In dreptul fiecarei sarcini se afla 2 butoane, unul de 
+    delete - pentru a sterge un task si un buton edit pentru a edita informatiile. 
+    Consideratii pentru ulterioara imbunatatire a aplicatiei : butonul edit ar trebui sa permita utilizatorului sa 
+    editeze doar partea de care este interesat ( 1 camp, 2 sau toata inregistrare).   */
+    
+    .header{
+        font-family:'Times New Roman', serif;
+        padding: 30px 16px;
+        background: transparent;
+        color: black;
+        font-size:small;
+        font-weight:100;
+        text-align:justify;
+        border-style:solid;
+        border-color: black;
+        border-bottom-width: thin;
+        border-top-width: 0cm;
+        border-left-width: 0cm;
+        border-right-width: 0cm;
+    }
+
+    .scrolling-image {
+  background: url("https://img.freepik.com/free-vector/white-abstract-wallpaper_23-2148830026.jpg?w=2000") repeat-x;
+  height: 750px;
+  width: 7680px;
+}
+
+    .sticky{
+        position: fixed;
+        top: 0;
+        width: 100%
+    }
+
+      img.background {
+        background-repeat: repeat;
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        z-index: -1;
+        width: 100%;
+        height: 100%;
+        filter:blur(0px);
+       
+      }
+
+      .employee-form {
+        border-style: solid;
+        padding: 10px;
+        margin: auto;
+        width: 40%;
+        }
+
+        .employees-table {
+          border-style: solid;
+          /* margin-bottom: 10px; */
+          /* margin-left: 10px; */
+          padding: 20px;
+          /* width: 50%; */
+          margin:auto;
+          width: 60%;
+          /* border: 3px solid green; */
+          /* padding: 10px; */
+      }
+
+            body > table{
+          width: 70%;
+      }
+
+      table{
+          border-collapse: collapse;
+      }
+      table.list{
+          width:100%;
+      }
+
+      td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+tr:nth-child(even),table.list thead>tr {
+    background-color: #dddddd;
+}
+
+input[type=text], input[type=number] {
+    width: 100%;
+    padding: 8px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+
+    </style>
+  <script>
+
+    const SERVER = 'http://localhost:8080'
+    let tasks = []
+    
+
+
+ const loadTasks = async () => {
+      try {
+        const response = await fetch(`${SERVER}/tasks`)
+        if (!response.ok) {
+          throw response
+        }
+        const data = await response.json()
+        return data
+
+      } catch (error) {
+        console.warn(error)
+      }
+    }
+
+
+    const deleteTask = async (taskId) => {
+        try {
+          console.log(taskId)
+          await fetch(`${SERVER}/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          await loadTasks()
+        } catch (error) {
+          console.warn(error)
+        }
+      }
+
+
+      
+      const editTask = async (taskId) => {
+        let task;
+        try {
+          
+          const response = await fetch(`${SERVER}/tasks/${taskId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }) 
+         task = await response.json()    
+          console.log('response')     
+        } catch (error) {
+          console.warn(error)
+        }
+
+          const editForm = document.getElementById("editForm")
+          editForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+    const formData = new FormData(event.target);
+    task.nameEmployee = formData.get('editNameEmployee');
+    task.nameTask = formData.get('editNameTask');
+    task.critical_condition = formData.get('editCriticalCondition');
+    task.date = formData.get('editDateTask') ;  
+  
+  try {
+          
+          await fetch(`${SERVER}/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+            , body: JSON.stringify({ nameEmployee: task.nameEmployee, 
+              nameTask:task.nameTask,
+            critical_condition: task.critical_condition,
+          date: task.date })
+          });
+          await loadTasks()
+         await updateTaskList()
+        }catch (error) {
+          console.warn(error)
+        }
+        
+      });
+}
+
+ 
+    const updateTaskList = async () => {
+      const taskList = document.getElementById('taskList')
+      tasks = await loadTasks()
+      tasks.sort((a, b) => a.critical_condition - b.critical_condition);
+      const taskRows = tasks.map(e => `
+        <tr>
+          <td>${e.id}</td>
+          <td>${e.nameEmployee}</td>
+          <td>${e.nameTask}</td>
+          <td>${e.critical_condition}</td>
+          <td>${e.date}</td>
+          <td id="taskId-${e.id}"><button onclick="deleteTask(${e.id})">Delete</button></td>
+          <td id="taskId-${e.id}"><button onclick="editTask(${e.id})">Edit</button></td></tr>
+      `).join('')
+      const taskTable = `
+        <table>
+          <tbody>
+            ${taskRows}
+          </tbody>
+        </table>
+      `
+      taskList.innerHTML = taskTable
+    }
+
+    window.onload = async () => {
+      updateTaskList()
+
+      const numeETask = document.getElementById('numeETask')
+      const numeTTask = document.getElementById('numeTTask')
+      const criticTask = document.getElementById('criticTask')
+      const dateTask = document.getElementById('dateTask')
+      const addButton = document.getElementById('addButton')
+
+     
+
+      
+      addButton.onclick = async () => {
+        try {
+          const payload = {
+            nameEmployee: numeETask.value,
+            nameTask: numeTTask.value,
+            critical_condition: criticTask.value,
+            date: dateTask.value
+          }
+          await fetch(`${SERVER}/tasks`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          })
+          updateTaskList()
+        } catch (error) {
+          console.warn(error)
+        }
+      }
+
+
+
+    }
+  </script>
+</head>
+<body>
+  
+  
+
+
+  <div class="header" id="myHeader">
+    <h1>Aplicatie pentru gestionarea task-urilor din cadrul unei companii</h1>
+</div>
+<img class="background"src="https://img.freepik.com/free-vector/white-abstract-wallpaper_23-2148830026.jpg?w=2000" >
+<br> <br>
+<div class="employee-form">
+<form onsubmit="event.preventDefault();onFormSubmit();" autocomplete="off">
+  Numele*  <br>
+  <select type="text"  id="numeETask">
+      <option value="Selectati un nume"> Selectati un nume</option>
+      <option value="Tudosoiu Andreea"> Tudosoiu Andreea </option>
+      <option value="Mares Anamaria"> Mares Anamaria </option>
+      <option value="Moroianu Georgiana "> Moroianu Georgiana </option>
+      <option value="Pana Alexandru"> Pana Alexandru </option>
+      <option value="Enache Razvan "> Enache Razvan </option>
+      <option value="Dumitru Amalia"> Dumitru Amalia </option> 
+      <option value="Rusu David "> Rusu David </option>
+      <option value="Manta Andrei"> Manta Andrei </option>
+      <option value="Toader Gabriel"> Toader Gabriel </option>
+    </select>
+  <br> <br>Sarcina* <br>
+  <input type="text" id="numeTTask"/>
+  <br> Grad critic* <br>
+  <input type="number" id="criticTask"/>
+  Data *
+  <br>
+  <input type="date" id="dateTask"/>
+  <br>
+  
+  <input type="button" value="+" id="addButton" />
+</form>
+</div>
+
+<br>
+<div class = "employees-table">
+  <table class="list" id="taskList">
+    
+</table>
+</div>
+
+     
+<form id="editForm" >
+  Caseta pentru editare<br>
+  <input type="text" id="editNameEmployee" placeholder="Name Employee">
+  <input type="text" id="editNameTask" placeholder="Name Task">
+  <input type="number" id="editCriticalCondition" placeholder="Critical Condition">
+  <input type="date" id="editDateTask" placeholder="editDateTask">
+  <button type="submit">Save</button>
+</form>
+
+
+</body>
+</html>
+ 
